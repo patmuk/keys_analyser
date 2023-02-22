@@ -1,0 +1,25 @@
+[package]
+name = "keylogger"
+version = "0.1.0"
+edition = "2021"
+
+default-run = "keylogger"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "server"
+path = "./src/server.rs"
+
+[features]
+window_titles = ["winapi"]
+
+[dependencies]
+#rdev = "0.5.1"
+rdev = {path = "../rdev"}
+#serde_json = "1.0.68"
+chrono = "*"
+serde = {version = "1.0.130", features = ["derive"] }
+winapi = { features = ["winuser", "consoleapi"], version = "0.3.9", optional = true }
+
+pretty_env_logger = "0.4.0"
