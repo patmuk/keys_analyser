@@ -1,6 +1,4 @@
 use std::collections::BTreeMap;
-
-use chrono::prelude::*;
 //use std::fs::OpenOptions;
 //use std::io::Write;
 use rdev::{EventType::*, Key::*};
@@ -22,44 +20,23 @@ pub fn log_keys() {
             KeyPress(key_pressed) => {
                 match key_pressed {
                     Space | Return | Enter => {
-                        words
-                            .entry(format!("{:?}", key_pressed))
-                            .and_modify(|count| *count += 1)
-                            .or_insert(1);
-                        cursor_pos = 0;
-                        let new_word = key_buffer.join("");
-                        key_buffer.clear();
-                        words
-                            .entry(new_word)
-                            .and_modify(|count| *count += 1)
-                            .or_insert(1);
-
-                        let timestamp: DateTime<Local> = DateTime::from(event.time);
-                        println!("[{:?}] Recorded word, so far: {:?}", timestamp, words);
+                        log_sequence(&mut words, format!("{:?}", key_pressed));
+                        log_buffer(&mut words, &mut key_buffer, &mut cursor_pos);
                     }
                     LeftArrow => {
-                        words
-                            .entry(format!("{:?}", key_pressed))
-                            .and_modify(|count| *count += 1)
-                            .or_insert(1);
+                        log_sequence(&mut words, format!("{:?}", key_pressed));
                         if cursor_pos >= 1 {
                             cursor_pos -= 1;
                         }
                     }
                     RightArrow => {
-                        words
-                            .entry(format!("{:?}", key_pressed))
-                            .and_modify(|count| *count += 1)
-                            .or_insert(1);
+                        log_sequence(&mut words, format!("{:?}", key_pressed));
                         if cursor_pos < key_buffer.len() {
                             cursor_pos += 1;
                         };
                     }
                     Backspace | Delete => {
-                        words
-                            .entry(format!("{:?}", key_pressed))
-                            .and_modify(|count| *count += 1)
-                            .or_insert(1);
+                        log_sequence(&mut words, format!("{:?}", key_pressed));
                         if cursor_pos >= 1 {
                             match key_pressed {
                                 Backspace => {
@@ -93,10 +70,7 @@ pub fn log_keys() {
                             } else {
                                 // TODO handel alt, etc
                                 // these must be non-letters, adding them
-                                words
-                                    .entry(format!("{:?}", key_pressed))
-                                    .and_modify(|count| *count += 1)
-                                    .or_insert(1);
+                                log_sequence(&mut words, format!("{:?}", key_pressed));
                             }
                         } else {
                             panic!("not recorded {:?}", key_pressed);
@@ -117,6 +91,24 @@ pub fn log_keys() {
         }
     })
     .unwrap();
+}
+
+fn log_sequence(words: &mut BTreeMap<String, i32>, sequence: String) {
+    words
+        .entry(sequence)
+        .and_modify(|count| *count += 1)
+        .or_insert(1);
+}
+
+fn log_buffer(
+    words: &mut BTreeMap<String, i32>,
+    key_buffer: &mut Vec<String>,
+    cursor_pos: &mut usize,
+) {
+    *cursor_pos = 0;
+    let sequence = key_buffer.join("");
+    key_buffer.clear();
+    log_sequence(words, sequence);
 }
 
 fn add_key_to_buffer(
