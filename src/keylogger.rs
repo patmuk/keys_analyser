@@ -17,80 +17,103 @@ pub fn log_keys() {
     // blocking
     rdev::listen(move |event| {
         println!("logged so far: {:?}", words);
-        // listen to keyPress only
-        let key = match event.event_type {
-            KeyPress(key) => Some(key),
-            _ => None,
-        };
-        if let Some(key) = key {
-            match key {
-                Space | Return | Enter => {
-                    words
-                        .entry(format!("{:?}", key))
-                        .and_modify(|count| *count += 1)
-                        .or_insert(1);
-                    cursor_pos = 0;
-                    let new_word = key_buffer.join("");
-                    key_buffer.clear();
-                    words
-                        .entry(new_word)
-                        .and_modify(|count| *count += 1)
-                        .or_insert(1);
 
-                    let timestamp: DateTime<Local> = DateTime::from(event.time);
+        match event.event_type {
+            KeyPress(key_pressed) => {
+                match key_pressed {
+                    Space | Return | Enter => {
+                        words
+                            .entry(format!("{:?}", key_pressed))
+                            .and_modify(|count| *count += 1)
+                            .or_insert(1);
+                        cursor_pos = 0;
+                        let new_word = key_buffer.join("");
+                        key_buffer.clear();
+                        words
+                            .entry(new_word)
+                            .and_modify(|count| *count += 1)
+                            .or_insert(1);
 
-                    println!("[{:?}] Recorded word, so far: {:?}", timestamp, words);
-                }
-                LeftArrow => {
-                    words.entry(format!("{:?}", key)).and_modify(|count| *count += 1).or_insert(1);
-                    if cursor_pos >= 1 {
-                        cursor_pos -= 1;
+                        let timestamp: DateTime<Local> = DateTime::from(event.time);
+                        println!("[{:?}] Recorded word, so far: {:?}", timestamp, words);
                     }
-                }
-                RightArrow => {
-                    words.entry(format!("{:?}", key)).and_modify(|count| *count += 1).or_insert(1);
-                    if cursor_pos < key_buffer.len() {
-                        cursor_pos += 1;
-                    };
-                }
-                Backspace | Delete => {
-                    words.entry(format!("{:?}", key)).and_modify(|count| *count += 1).or_insert(1);
-                    if cursor_pos >= 1 {
-                        match key {
-                            Backspace => {
-                                cursor_pos -= 1;
-                                key_buffer.remove(cursor_pos);
-                            }
-                            Delete => {
-                                if cursor_pos != key_buffer.len() {
+                    LeftArrow => {
+                        words
+                            .entry(format!("{:?}", key_pressed))
+                            .and_modify(|count| *count += 1)
+                            .or_insert(1);
+                        if cursor_pos >= 1 {
+                            cursor_pos -= 1;
+                        }
+                    }
+                    RightArrow => {
+                        words
+                            .entry(format!("{:?}", key_pressed))
+                            .and_modify(|count| *count += 1)
+                            .or_insert(1);
+                        if cursor_pos < key_buffer.len() {
+                            cursor_pos += 1;
+                        };
+                    }
+                    Backspace | Delete => {
+                        words
+                            .entry(format!("{:?}", key_pressed))
+                            .and_modify(|count| *count += 1)
+                            .or_insert(1);
+                        if cursor_pos >= 1 {
+                            match key_pressed {
+                                Backspace => {
+                                    cursor_pos -= 1;
                                     key_buffer.remove(cursor_pos);
                                 }
-                            }
-                            _ => {
-                                panic!("Forgot a key to match?")
+                                Delete => {
+                                    if cursor_pos != key_buffer.len() {
+                                        key_buffer.remove(cursor_pos);
+                                    }
+                                }
+                                _ => {
+                                    panic!("Forgot a key to match?")
+                                }
                             }
                         }
                     }
-                }
-                _ => {
-                    println!("[pressed] key: {:?}, event.name: {:?}", key, event.name);
-                    // println!("[pressed] {:?}", key);
-                    if let Some(keycode) = event.name {
-                        // add letters to the buffer, as we want to record words!
-                        if keycode.bytes().last() < Some(127_u8)
-                            && keycode.bytes().last() > Some(31_u8)
-                        {
-                            add_key_to_buffer(keycode, &mut key_buffer, cursor_pos).unwrap();
-                            cursor_pos += 1;
+                    _ => {
+                        println!(
+                            "[pressed] key: {:?}, event.name: {:?}",
+                            key_pressed, event.name
+                        );
+                        // println!("[pressed] {:?}", key);
+                        if let Some(keycode) = event.name {
+                            // add letters to the buffer, as we want to record words!
+                            if keycode.bytes().last() < Some(127_u8)
+                                && keycode.bytes().last() > Some(31_u8)
+                            {
+                                add_key_to_buffer(keycode, &mut key_buffer, cursor_pos).unwrap();
+                                cursor_pos += 1;
+                            } else {
+                                // TODO handel alt, etc
+                                // these must be non-letters, adding them
+                                words
+                                    .entry(format!("{:?}", key_pressed))
+                                    .and_modify(|count| *count += 1)
+                                    .or_insert(1);
+                            }
                         } else {
-                            // these must be non-letters
-                        words.entry(format!("{:?}", key)).and_modify(|count| *count += 1).or_insert(1);
+                            panic!("not recorded {:?}", key_pressed);
                         }
-                    } else {
-                        panic!("not recorded {:?}", key);
                     }
                 }
-            };
+            }
+            KeyRelease(key_released) => {
+                match key_released {
+                    Alt | AltGr | ControlLeft | ControlRight | MetaLeft | MetaRight => {
+                        // TODO handle recording
+                        println!("released")
+                    }
+                    _ => { /* noop for other key releases*/ }
+                }
+            }
+            _ => { /* ignoring all pther events */ }
         }
     })
     .unwrap();
