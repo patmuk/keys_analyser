@@ -19,8 +19,8 @@ pub fn log_keys() {
 
     // blocking
     rdev::listen(move |event| {
-        println!("logged so far: {:?}", words);
         println!("processing event: {:?}", event);
+        println!("buffer is: {:?}", key_buffer);
 
         match event.event_type {
             KeyPress(key_pressed) => {
@@ -99,6 +99,7 @@ pub fn log_keys() {
             }
             _ => { /* ignoring all pther events */ }
         }
+        println!("logged so far: {:?}", words);
     })
     .unwrap();
 }
@@ -139,7 +140,10 @@ fn add_key_to_buffer(event: &Event, buffer: &mut Vec<String>, pos: usize) {
 
 fn get_key_from_event_type(event_type: EventType) -> String {
     match event_type {
-        KeyPress(key) | KeyRelease(key) => format!("{:?}", key),
+        KeyPress(key) | KeyRelease(key) => {
+            let key_name = &format!("{:?}", key)[..];
+            key_name.strip_prefix("Key").unwrap_or(key_name).to_string()
+        }
         _ => panic!("not a key event! {:?}", event_type),
     }
 }
