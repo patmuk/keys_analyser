@@ -141,8 +141,8 @@ fn add_key_to_buffer(event: &Event, buffer: &mut Vec<String>, pos: usize) {
 fn get_key_from_event_type(event_type: EventType) -> String {
     match event_type {
         KeyPress(key) | KeyRelease(key) => {
-            let key_name = &format!("{:?}", key)[..];
-            key_name.strip_prefix("Key").unwrap_or(key_name).to_string()
+            let key_name = format!("{:?}", key);
+            key_name.strip_prefix("Key").unwrap_or(&key_name).to_string()
         }
         _ => panic!("not a key event! {:?}", event_type),
     }
