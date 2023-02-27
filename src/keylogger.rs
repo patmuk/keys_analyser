@@ -65,12 +65,11 @@ pub fn log_keys() {
                         flush_buffer(&mut words, &mut key_buffer, &mut cursor_pos);
                     }
                     _ if mod_pressed => {
-                        println!("[pressed while mod] event: {:?}", event);
+                        // println!("[pressed while mod] event: {:?}", event);
                         add_key_to_buffer(& event, &mut key_buffer, cursor_pos);
-                        println!("logged not covered key {:?}", key_pressed);
                     },
                     _ /* if !mod_pressed*/ => {
-                        println!("[pressed while NO mod] event: {:?}", event);
+                        // println!("[pressed while NO mod] event: {:?}", event);
                         if let Some(keycode) = &event.name {
                             // add letters to the buffer, as we want to record words!
                             if keycode.bytes().last() < Some(127_u8)
@@ -79,10 +78,8 @@ pub fn log_keys() {
                                 add_key_to_buffer(&event, &mut key_buffer, cursor_pos);
                                 cursor_pos += 1;
                             } else {
-                                // TODO handel alt, etc
                                 // these must be non-letters, adding them
                                 log_sequence(&mut words, format!("{:?}", key_pressed));
-                                println!("logged not covered key {:?}", key_pressed);
                             }
                         } else {
                             panic!("not recorded {:?}", key_pressed);
@@ -95,9 +92,7 @@ pub fn log_keys() {
                     Alt | AltGr | ControlLeft | ControlRight | MetaLeft | MetaRight => {
                         key_buffer.insert(0, format!("{:?} + ", key_released));
                         flush_buffer(&mut words, &mut key_buffer, &mut cursor_pos);
-
                         mod_pressed = false;
-                        println!("released")
                     }
                     _ => { /* noop for other key releases*/ }
                 }
