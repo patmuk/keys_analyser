@@ -1,23 +1,17 @@
-# keylogger-rs -- Simple Linux + Windows Keylogger
-## Spent so long over-engineering this but it doesn't log to anywhere
+# keys analyser (for Mac, Linux and Windows)
+This program is supposed to work in the background and log all key presses.
+This shall lead to an analysis, on which bases an individual keymap or chords can be deducted.
 
-I was planning to have the typed words be sent to a remote server, but you can implement that yourself if you'd like!
-
-### Detected on Windows, not sure about Linux
-Is also detected on Windows after it was 'cloud-scanned', so _you will have to put in some extra work_ if you want this FUD.
-
-__Please leave an issue if you found this and want me to fix it/make it better__
-
-## Waffle
-Someone please fork this because I overhauled this like 5 times trying to make it work with backspaces and cursor positions.
-
-One thing I would like to implement is ikeeping track of moving back and forth words as well as deleting words. The current word is stored in the `key_buf` so you should be able to get that working.
+Developed on a Mac, supposed to work in Linux and Windows as well.
 
 ## Features
 - Keeps track of cursor position
-- Will wait until the enter key is pressed to 'send' the words.
-- Works on windows but you will have add/ask me to get it working lol 
+- Logs words
+- logs modifyer combinations (e.g. ControlLeft + s)
+- 
 
-I'll add some comments for readability etc...
-
-All in all a fun rust project everyone should try
+## todo
+- write to a log file
+- read from a log file on startup, so the analysis can continue
+- add hashed phrases, like passwords, to this file to be ignored
+  
