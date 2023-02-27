@@ -11,6 +11,7 @@ pub fn log_keys() {
     let mut key_buffer: Vec<String> = Vec::new();
     // hold all logged keys, separated in words, like this ["hello", "SPACE", "world!"]
     let mut words = BTreeMap::new();
+    let mut mod_pressed = false;
 
     // blocking
     rdev::listen(move |event| {
@@ -21,7 +22,7 @@ pub fn log_keys() {
                 match key_pressed {
                     Space | Return | Enter => {
                         log_sequence(&mut words, format!("{:?}", key_pressed));
-                        log_buffer(&mut words, &mut key_buffer, &mut cursor_pos);
+                        flush_buffer(&mut words, &mut key_buffer, &mut cursor_pos);
                     }
                     LeftArrow => {
                         log_sequence(&mut words, format!("{:?}", key_pressed));
@@ -54,6 +55,10 @@ pub fn log_keys() {
                             }
                         }
                     }
+                    Alt | AltGr | ControlLeft | ControlRight | MetaLeft | MetaRight => {
+                        mod_pressed = true;
+                        flush_buffer(&mut words, &mut key_buffer, &mut cursor_pos);
+                    }
                     _ => {
                         println!(
                             "[pressed] key: {:?}, event.name: {:?}",
@@ -71,6 +76,7 @@ pub fn log_keys() {
                                 // TODO handel alt, etc
                                 // these must be non-letters, adding them
                                 log_sequence(&mut words, format!("{:?}", key_pressed));
+                                println!("logged not covered key {:?}", key_pressed);
                             }
                         } else {
                             panic!("not recorded {:?}", key_pressed);
@@ -81,7 +87,9 @@ pub fn log_keys() {
             KeyRelease(key_released) => {
                 match key_released {
                     Alt | AltGr | ControlLeft | ControlRight | MetaLeft | MetaRight => {
-                        // TODO handle recording
+                        key_buffer.insert(0, format!("{:?} + ", key_released));
+                        flush_buffer(&mut words, &mut key_buffer, &mut cursor_pos);
+
                         println!("released")
                     }
                     _ => { /* noop for other key releases*/ }
@@ -100,14 +108,14 @@ fn log_sequence(words: &mut BTreeMap<String, i32>, sequence: String) {
         .or_insert(1);
 }
 
-fn log_buffer(
+fn flush_buffer(
     words: &mut BTreeMap<String, i32>,
     key_buffer: &mut Vec<String>,
     cursor_pos: &mut usize,
 ) {
-    *cursor_pos = 0;
     let sequence = key_buffer.join("");
     key_buffer.clear();
+    *cursor_pos = 0;
     log_sequence(words, sequence);
 }
 
