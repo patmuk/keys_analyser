@@ -116,6 +116,9 @@ fn flush_buffer(
     key_buffer: &mut Vec<String>,
     cursor_pos: &mut usize,
 ) {
+    if key_buffer.is_empty() {
+        return;
+    };
     let sequence = key_buffer.join("");
     key_buffer.clear();
     *cursor_pos = 0;
@@ -142,7 +145,10 @@ fn get_key_from_event_type(event_type: EventType) -> String {
     match event_type {
         KeyPress(key) | KeyRelease(key) => {
             let key_name = format!("{:?}", key);
-            key_name.strip_prefix("Key").unwrap_or(&key_name).to_string()
+            key_name
+                .strip_prefix("Key")
+                .unwrap_or(&key_name)
+                .to_string()
         }
         _ => panic!("not a key event! {:?}", event_type),
     }
