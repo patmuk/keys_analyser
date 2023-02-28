@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use crate::keys_log::KeysLog;
 //use std::fs::OpenOptions;
 //use std::io::Write;
 use rdev::{
@@ -14,7 +14,7 @@ pub fn log_keys() {
     // hold current word like this ["apple"]
     let mut key_buffer: Vec<String> = Vec::new();
     // hold all logged keys, separated in words, like this ["hello", "SPACE", "world!"]
-    let mut key_log = BTreeMap::new();
+    let mut keys_log = KeysLog::new();
     let mut mod_pressed = false;
 
     // blocking
@@ -26,23 +26,23 @@ pub fn log_keys() {
             KeyPress(key_pressed) => {
                 match key_pressed {
                     Space | Return | Enter => {
-                        log_sequence(&mut key_log, format!("{:?}", key_pressed));
-                        flush_buffer(&mut key_log, &mut key_buffer, &mut cursor_pos);
+                        log_sequence(&mut keys_log, &format!("{:?}", key_pressed));
+                        flush_buffer(&mut keys_log, &mut key_buffer, &mut cursor_pos);
                     }
                     LeftArrow => {
-                        log_sequence(&mut key_log, format!("{:?}", key_pressed));
+                        log_sequence(&mut keys_log, &format!("{:?}", key_pressed));
                         if cursor_pos >= 1 {
                             cursor_pos -= 1;
                         }
                     }
                     RightArrow => {
-                        log_sequence(&mut key_log, format!("{:?}", key_pressed));
+                        log_sequence(&mut keys_log, &format!("{:?}", key_pressed));
                         if cursor_pos < key_buffer.len() {
                             cursor_pos += 1;
                         };
                     }
                     Backspace | Delete => {
-                        log_sequence(&mut key_log, format!("{:?}", key_pressed));
+                        log_sequence(&mut keys_log, &format!("{:?}", key_pressed));
                         if cursor_pos >= 1 {
                             match key_pressed {
                                 Backspace => {
@@ -62,7 +62,7 @@ pub fn log_keys() {
                     }
                     Alt | AltGr | ControlLeft | ControlRight | MetaLeft | MetaRight => {
                         mod_pressed = true;
-                        flush_buffer(&mut key_log, &mut key_buffer, &mut cursor_pos);
+                        flush_buffer(&mut keys_log, &mut key_buffer, &mut cursor_pos);
                     }
                     _ if mod_pressed => {
                         // println!("[pressed while mod] event: {:?}", event);
@@ -79,7 +79,7 @@ pub fn log_keys() {
                                 cursor_pos += 1;
                             } else {
                                 // these must be non-letters, adding them
-                                log_sequence(&mut key_log, format!("{:?}", key_pressed));
+                                log_sequence(&mut keys_log, &format!("{:?}", key_pressed));
                             }
                         } else {
                             panic!("not recorded {:?}", key_pressed);
@@ -91,7 +91,7 @@ pub fn log_keys() {
                 match key_released {
                     Alt | AltGr | ControlLeft | ControlRight | MetaLeft | MetaRight => {
                         key_buffer.insert(0, format!("{:?} + ", key_released));
-                        flush_buffer(&mut key_log, &mut key_buffer, &mut cursor_pos);
+                        flush_buffer(&mut keys_log, &mut key_buffer, &mut cursor_pos);
                         mod_pressed = false;
                     }
                     _ => { /* noop for other key releases*/ }
@@ -99,30 +99,25 @@ pub fn log_keys() {
             }
             _ => { /* ignoring all pther events */ }
         }
-        println!("logged so far: {:?}", key_log);
+        // println!("logged so far: {:?}", keys_log);
+        println!("logged so far: ");
+        print_log(&mut keys_log);
     })
     .unwrap();
 }
 
-fn log_sequence(key_log: &mut BTreeMap<String, i32>, sequence: String) {
-    key_log
-        .entry(sequence)
-        .and_modify(|count| *count += 1)
-        .or_insert(1);
+fn log_sequence(keys_log: &mut KeysLog, sequence: &str) {
+    keys_log.log(&sequence);
 }
 
-fn flush_buffer(
-    key_log: &mut BTreeMap<String, i32>,
-    key_buffer: &mut Vec<String>,
-    cursor_pos: &mut usize,
-) {
+fn flush_buffer(keys_log: &mut KeysLog, key_buffer: &mut Vec<String>, cursor_pos: &mut usize) {
     if key_buffer.is_empty() {
         return;
     };
     let sequence = key_buffer.join("");
     key_buffer.clear();
     *cursor_pos = 0;
-    log_sequence(key_log, sequence);
+    log_sequence(keys_log, &sequence);
 }
 
 fn add_key_to_buffer(event: &Event, buffer: &mut Vec<String>, pos: usize) {
@@ -152,4 +147,9 @@ fn get_key_from_event_type(event_type: EventType) -> String {
         }
         _ => panic!("not a key event! {:?}", event_type),
     }
+}
+
+fn print_log(keys_log: &mut KeysLog) {
+    keys_log.sort();
+    println!("{}", keys_log);
 }
